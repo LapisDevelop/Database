@@ -22,6 +22,14 @@ public class DatabaseConnection {
         }
     }
 
+    public void createTable(String table) {
+        try {
+            con.createStatement().execute("CREATE TABLE IF NOT EXISTS " + table);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create table '" + table + "': " + e.getMessage(), e);
+        }
+    }
+
     public ResultSet query(final String sql, Object... params) {
         try {
             var stmt = con.prepareStatement(sql);
