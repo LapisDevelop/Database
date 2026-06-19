@@ -124,6 +124,18 @@ public interface DatabaseTable<T extends DatabaseTable<T>> {
         }
     }
 
+    default void setId(int id) {
+        try {
+            var field = this.getClass().getDeclaredField("id");
+            field.setAccessible(true);
+            field.setInt(this, id);
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException("Failed to set ID: does the class have an `id` field? " + e, e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Failed to access ID field: " + e, e);
+        }
+    }
+
     default ArrayList<T> select(String whereClause, Object... params) {
         String sql;
         if (whereClause == null || whereClause.isEmpty()) {
@@ -147,7 +159,9 @@ public interface DatabaseTable<T extends DatabaseTable<T>> {
             String csvFieldNames = String.join(", ", getFieldNamesExceptId());
             String csvFieldPlaceholders = String.join(", ", "?".repeat(getFieldValuesExceptId().size()).split(""));
             String sql = "INSERT INTO " + tableName() + " (" + csvFieldNames + ") VALUES (" + csvFieldPlaceholders + ")";
-            return con.insert(sql, getFieldValuesExceptId().toArray());
+            int id = con.insert(sql, getFieldValuesExceptId().toArray());
+            setId(id);
+            return id;
         }
     }
 
