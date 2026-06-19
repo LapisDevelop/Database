@@ -3,8 +3,8 @@ package com.lapisdev.database;
 import java.sql.Connection;
 import java.sql.ResultSet;
 
-public class DatabaseConnection {
-    private Connection con;
+public class DatabaseConnection implements AutoCloseable {
+    private final Connection con;
 
     public DatabaseConnection(String connectionString) {
         try {
@@ -14,6 +14,7 @@ public class DatabaseConnection {
         }
     }
 
+    @Override
     public void close() {
         try {
             if (con != null) con.close();

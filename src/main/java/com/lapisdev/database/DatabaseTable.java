@@ -26,8 +26,9 @@ public interface DatabaseTable<T extends DatabaseTable<T>> {
     }
 
     default void createTable() {
-        DatabaseConnection con = DatabaseConnectionManager.current.open();
-        con.createTable(tableDefinition());
+        try (DatabaseConnection con = DatabaseConnectionManager.current.open()) {
+            con.createTable(tableDefinition());
+        }
     }
 
     default String getSQLType(Class<?> type, String name) {
@@ -124,7 +125,6 @@ public interface DatabaseTable<T extends DatabaseTable<T>> {
     }
 
     default ArrayList<T> select(String whereClause, Object... params) {
-        DatabaseConnection con = DatabaseConnectionManager.current.open();
         String sql;
         if (whereClause == null || whereClause.isEmpty()) {
             sql = "SELECT * FROM " + tableName();
@@ -143,20 +143,22 @@ public interface DatabaseTable<T extends DatabaseTable<T>> {
     }
 
     default int insert() {
-        DatabaseConnection con = DatabaseConnectionManager.current.open();
-        String csvFieldNames = String.join(", ", getFieldNamesExceptId());
-        String csvFieldPlaceholders = String.join(", ", "?".repeat(getFieldValuesExceptId().size()).split(""));
-        String sql = "INSERT INTO " + tableName() + " (" + csvFieldNames + ") VALUES (" + csvFieldPlaceholders + ")";
-        return con.insert(sql, getFieldValuesExceptId().toArray());
+        try (DatabaseConnection con = DatabaseConnectionManager.current.open()) {
+            String csvFieldNames = String.join(", ", getFieldNamesExceptId());
+            String csvFieldPlaceholders = String.join(", ", "?".repeat(getFieldValuesExceptId().size()).split(""));
+            String sql = "INSERT INTO " + tableName() + " (" + csvFieldNames + ") VALUES (" + csvFieldPlaceholders + ")";
+            return con.insert(sql, getFieldValuesExceptId().toArray());
+        }
     }
 
     default int update(String whereClause, Object... params) {
-        DatabaseConnection con = DatabaseConnectionManager.current.open();
-        String sql = "UPDATE " + tableName() + " SET " + String.join(", ", getFieldValues().stream().map(v -> "?").toArray(String[]::new)) + " WHERE " + whereClause;
-        Object[] allParams = new Object[getFieldValues().size() + params.length];
-        System.arraycopy(getFieldValues().toArray(), 0, allParams, 0, getFieldValues().size());
-        System.arraycopy(params, 0, allParams, getFieldValues().size(), params.length);
-        return con.update(sql, allParams);
+        try (DatabaseConnection con = DatabaseConnectionManager.current.open()) {
+            String sql = "UPDATE " + tableName() + " SET " + String.join(", ", getFieldValues().stream().map(_ -> "?").toArray(String[]::new)) + " WHERE " + whereClause;
+            Object[] allParams = new Object[getFieldValues().size() + params.length];
+            System.arraycopy(getFieldValues().toArray(), 0, allParams, 0, getFieldValues().size());
+            System.arraycopy(params, 0, allParams, getFieldValues().size(), params.length);
+            return con.update(sql, allParams);
+        }
     }
 
     default int update(String whereClause) {
@@ -168,9 +170,10 @@ public interface DatabaseTable<T extends DatabaseTable<T>> {
     }
 
     default int delete(String whereClause, Object... params) {
-        DatabaseConnection con = DatabaseConnectionManager.current.open();
-        String sql = "DELETE FROM " + tableName() + " WHERE " + whereClause;
-        return con.update(sql, params);
+        try (DatabaseConnection con = DatabaseConnectionManager.current.open()) {
+            String sql = "DELETE FROM " + tableName() + " WHERE " + whereClause;
+            return con.update(sql, params);
+        }
     }
 
     default int delete() {
@@ -178,23 +181,22 @@ public interface DatabaseTable<T extends DatabaseTable<T>> {
     }
 
     default int deleteAll() {
-        DatabaseConnection con = DatabaseConnectionManager.current.open();
-        String sql = "DELETE FROM " + tableName();
-        return con.update(sql);
+        return execute("DELETE FROM " + tableName());
     }
 
     default ArrayList<T> query(String fullSql, Object... params) {
-        DatabaseConnection con = DatabaseConnectionManager.current.open();
-        ResultSet rs = con.query(fullSql, params);
-        ArrayList<T> results = new ArrayList<>();
-        try {
-            while (rs.next()) {
-                results.add(fromResultSet(rs));
+        try (DatabaseConnection con = DatabaseConnectionManager.current.open()) {
+            ResultSet rs = con.query(fullSql, params);
+            ArrayList<T> results = new ArrayList<>();
+            try {
+                while (rs.next()) {
+                    results.add(fromResultSet(rs));
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to instantiate table model for class " + getClass().getSimpleName(), e);
             }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to instantiate table model for class " + getClass().getSimpleName(), e);
+            return results;
         }
-        return results;
     }
 
     default ArrayList<T> query(String fullSql) {
@@ -202,8 +204,9 @@ public interface DatabaseTable<T extends DatabaseTable<T>> {
     }
 
     default int execute(String fullSql, Object... params) {
-        DatabaseConnection con = DatabaseConnectionManager.current.open();
-        return con.update(fullSql, params);
+        try (DatabaseConnection con = DatabaseConnectionManager.current.open()) {
+            return con.update(fullSql, params);
+        }
     }
 
     default int execute(String fullSql) {
