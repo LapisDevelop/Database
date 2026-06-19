@@ -167,10 +167,16 @@ public interface DatabaseTable<T extends DatabaseTable<T>> {
 
     default int update(String whereClause, Object... params) {
         try (DatabaseConnection con = DatabaseConnectionManager.current.open()) {
-            String sql = "UPDATE " + tableName() + " SET " + String.join(", ", getFieldValues().stream().map(fieldName -> fieldName + " = ?").toArray(String[]::new)) + " WHERE " + whereClause;
-            Object[] allParams = new Object[getFieldValues().size() + params.length];
-            System.arraycopy(getFieldValues().toArray(), 0, allParams, 0, getFieldValues().size());
-            System.arraycopy(params, 0, allParams, getFieldValues().size(), params.length);
+            StringBuilder setClause = new StringBuilder();
+            ArrayList<String> fieldNamesExceptId = getFieldNamesExceptId();
+            for (String fieldName : fieldNamesExceptId) {
+                setClause.append(fieldName).append(" = ?, ");
+            }
+            setClause.setLength(setClause.length() - 2);
+            String sql = "UPDATE " + tableName() + " SET " + setClause + " WHERE " + whereClause;
+            Object[] allParams = new Object[fieldNamesExceptId.size() + params.length];
+            System.arraycopy(getFieldValuesExceptId().toArray(), 0, allParams, 0, fieldNamesExceptId.size());
+            System.arraycopy(params, 0, allParams, fieldNamesExceptId.size(), params.length);
             return con.update(sql, allParams);
         }
     }
