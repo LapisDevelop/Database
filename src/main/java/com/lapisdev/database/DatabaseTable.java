@@ -231,7 +231,7 @@ public interface DatabaseTable<T extends DatabaseTable<T>> {
         return select(fieldName + " = ?", value);
     }
 
-    default ArrayList<T> fromId(int id) {
-        return select("id = ?", id);
+    default T fromId(int id) {
+        return QueryArray.single(select("id = ?", id));
     }
 }
