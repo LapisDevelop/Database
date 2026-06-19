@@ -2,17 +2,9 @@ plugins {
     id("java")
 }
 
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
 group = "com.lapisdev"
-version = "0.0.1"
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
+version = "0.0.2"
